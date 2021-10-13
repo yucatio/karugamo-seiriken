@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "karugamo-seiriken-staging",
+    "production": "karugamo-seiriken"
+  },
+  "targets": {}
+}

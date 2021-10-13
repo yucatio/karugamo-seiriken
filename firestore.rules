@@ -1,0 +1,82 @@
+rules_version = "2";
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /ticket-events/{ticketEvent} {
+      function validTicketEvent(docData) {
+        return docData.callStatus is string &&
+          docData.callStatus.matches("^(NOT_STARTED|CALLING|FINISHED)$") &&
+          docData.detail is string &&
+          docData.detail.size() <= 5000 &&
+          docData.nextCallNum is int &&
+          docData.nextTicketNum is int &&
+          docData.numTickets is int &&
+          docData.numTickets >= 3 &&
+          docData.numTickets <= 100 &&
+          docData.owner is string &&
+          docData.owner.size() <= 256 &&
+          docData.title is string &&
+          docData.title.size() <= 50 &&
+          docData.createdAt is timestamp &&
+          docData.updatedAt is timestamp &&
+          docData.nextTicketNum - 1 <= docData.numTickets &&
+          docData.nextCallNum <= docData.nextTicketNum;
+      }
+
+      allow get: if true;
+      allow list: if request.auth != null && request.auth.uid == resource.data.owner;
+
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.owner &&
+        validTicketEvent(request.resource.data) &&
+        request.resource.data.callStatus == "NOT_STARTED" &&
+        request.resource.data.nextCallNum == 1 &&
+        request.resource.data.nextTicketNum == 1;
+
+      allow update: if request.auth != null && request.auth.uid == resource.data.owner &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["title", "detail", "updatedAt"]) &&
+        validTicketEvent(request.resource.data);
+
+      allow update: if request.auth != null && request.auth.uid == resource.data.owner &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["callStatus", "nextCallNum", "updatedAt"]) &&
+        request.resource.data.nextCallNum == resource.data.nextCallNum + 1 &&
+        validTicketEvent(request.resource.data);
+
+      allow update: if request.auth != null &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nextTicketNum", "updatedAt"]) &&
+        validTicketEvent(request.resource.data) &&
+        request.resource.data.nextTicketNum == resource.data.nextTicketNum + 1 &&
+        request.auth.uid == getAfter(
+          /databases/$(database)/documents/ticket-events/$(ticketEvent)/tickets/$(resource.data.nextTicketNum)
+        ).data.user;
+      
+
+      match /tickets/{ticket} {
+        function validTicket(docData) {
+          return docData.get("calledAt", request.time) is timestamp &&
+            docData.status is string &&
+            docData.status.matches("^(WAITING|CALLED|STATUS_GREEN|STATUS_YELLOW|STATUS_RED)$")  &&
+            docData.user is string &&
+            docData.user.size() <= 256 &&
+            docData.createdAt is timestamp &&
+            docData.updatedAt is timestamp;
+        }
+
+        function ticketEventData() {
+          return get(/databases/$(database)/documents/ticket-events/$(ticketEvent)).data
+        }
+
+        allow read: if request.auth != null && request.auth.uid == ticketEventData().owner;
+
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.user &&
+          validTicket(request.resource.data) &&
+          request.resource.data.status == "WAITING";
+
+        allow update: if request.auth != null && request.auth.uid == ticketEventData().owner &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["calledAt", "status", "updatedAt"]);
+      }
+    }
+    match /{path=**}/tickets/{ticket} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.user;
+    }
+  }
+}
