@@ -18,7 +18,7 @@ service cloud.firestore {
           docData.title is string &&
           docData.title.size() <= 50 &&
           docData.createdAt is timestamp &&
-          docData.updatedAt is timestamp &&
+          docData.updatedAt == request.time &&
           docData.nextTicketNum - 1 <= docData.numTickets &&
           docData.nextCallNum <= docData.nextTicketNum;
       }
@@ -30,7 +30,8 @@ service cloud.firestore {
         validTicketEvent(request.resource.data) &&
         request.resource.data.callStatus == "NOT_STARTED" &&
         request.resource.data.nextCallNum == 1 &&
-        request.resource.data.nextTicketNum == 1;
+        request.resource.data.nextTicketNum == 1 &&
+        request.resource.data.createdAt == request.time;
 
       allow update: if request.auth != null && request.auth.uid == resource.data.owner &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["title", "detail", "updatedAt"]) &&
@@ -58,18 +59,24 @@ service cloud.firestore {
             docData.user is string &&
             docData.user.size() <= 256 &&
             docData.createdAt is timestamp &&
-            docData.updatedAt is timestamp;
+            docData.updatedAt == request.time;
         }
 
         function ticketEventData() {
           return get(/databases/$(database)/documents/ticket-events/$(ticketEvent)).data
         }
 
+        function ticketEventDataAfter() {
+          return getAfter(/databases/$(database)/documents/ticket-events/$(ticketEvent)).data
+        }
+
         allow read: if request.auth != null && request.auth.uid == ticketEventData().owner;
 
         allow create: if request.auth != null && request.auth.uid == request.resource.data.user &&
           validTicket(request.resource.data) &&
-          request.resource.data.status == "WAITING";
+          request.resource.data.status == "WAITING" &&
+          request.resource.data.createdAt == request.time &&
+          request.resource.id == string(ticketEventDataAfter().nextTicketNum - 1);
 
         allow update: if request.auth != null && request.auth.uid == ticketEventData().owner &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["calledAt", "status", "updatedAt"]);
