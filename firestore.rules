@@ -66,12 +66,17 @@ service cloud.firestore {
           return get(/databases/$(database)/documents/ticket-events/$(ticketEvent)).data
         }
 
+        function ticketEventDataAfter() {
+          return getAfter(/databases/$(database)/documents/ticket-events/$(ticketEvent)).data
+        }
+
         allow read: if request.auth != null && request.auth.uid == ticketEventData().owner;
 
         allow create: if request.auth != null && request.auth.uid == request.resource.data.user &&
           validTicket(request.resource.data) &&
           request.resource.data.status == "WAITING" &&
-          request.resource.data.createdAt == request.time;
+          request.resource.data.createdAt == request.time &&
+          request.resource.id == string(ticketEventDataAfter().nextTicketNum - 1);
 
         allow update: if request.auth != null && request.auth.uid == ticketEventData().owner &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["calledAt", "status", "updatedAt"]);
