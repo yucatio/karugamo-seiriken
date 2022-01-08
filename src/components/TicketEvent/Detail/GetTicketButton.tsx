@@ -75,7 +75,7 @@ const GetTicketButton = (props: Props) => {
         aria-describedby="alert-dialog-description"
       >
         <DialogTitle id="alert-dialog-title">
-          チケットを取得します
+          整理券を取得します
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">

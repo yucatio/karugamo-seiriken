@@ -17,7 +17,7 @@ export const formatSettings = {
   }
 }
 
-// チケットが削除されるまでの期間
+// 整理券が削除されるまでの期間
 export const ticketExpiryDays = 30
 
 export const commonInputString: { [key: string]: string } = {
