@@ -124,10 +124,10 @@ export const issueTicket = async (ticketEventId: string, uid: string): Promise<D
       throw new IllegalStateError("取得可能枚数を超えています")
     }
 
-    // チケットをすでに持っていないか最終確認
+    // 整理券をすでに持っていないか最終確認
     const currentUserTicket = await getCurrentUserTicket(ticketEventId, uid)
     if (currentUserTicket) {
-      throw new IllegalStateError("すでにチケットを取得しています")
+      throw new IllegalStateError("すでに整理券を取得しています")
     }
 
     // insert new ticket
@@ -191,7 +191,7 @@ export const callTicket = async (ticketEventId: string, callNumber: number) => {
     if (nextCallNumber <= docSnaps.data().numTickets) {
       transaction.update(docRef, { nextCallNum: nextCallNumber, updatedAt: serverTimestamp() })
     } else {
-      // 最後のチケットの場合はcallStatusをFINISHEDに変更
+      // 最後の整理券の場合はcallStatusをFINISHEDに変更
       transaction.update(docRef, { nextCallNum: nextCallNumber, callStatus: "FINISHED", updatedAt: serverTimestamp() })
     }
 
