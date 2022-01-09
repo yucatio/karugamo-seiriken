@@ -8,7 +8,7 @@ import { NotFoundError } from "../error/NotFoundError"
 import { db } from "../firebase"
 import { TicketEvent, TicketEventForm } from "../model/TicketEventModel"
 import { Ticket, TicketStatus } from "../model/TicketModel"
-import { ticketEventsPath, ticketsPath } from "../settings/SystemSettings"
+import { ticketEventsPath, ticketsPath, indexPath } from "../settings/SystemSettings"
 
 export const getTicketEvent = async (ticketEventId: string): Promise<TicketEvent | undefined> => {
   const docRef = doc(db, ticketEventsPath, ticketEventId)
@@ -71,6 +71,13 @@ export const getCurrentUserTicket = async (ticketEventId: string, uid: string) =
   return convertTicket(docSnap)
 }
 
+export const hasCurrentUserTicketIndex = async (ticketEventId: string, uid: string) => {
+  const docRef = doc(db, ticketEventsPath, ticketEventId, indexPath,ticketsPath, "user", uid)
+  const docSnap = await getDoc(docRef)
+
+  return docSnap.exists()
+}
+
 export const getOwnTickets = async (uid: string): Promise<Ticket[]> => {
   const ticketsGroup = collectionGroup(db, ticketsPath)
   const q = query(ticketsGroup, where("user", "==", uid))
@@ -125,8 +132,8 @@ export const issueTicket = async (ticketEventId: string, uid: string): Promise<D
     }
 
     // 整理券をすでに持っていないか最終確認
-    const currentUserTicket = await getCurrentUserTicket(ticketEventId, uid)
-    if (currentUserTicket) {
+    const currentUserTicketIndexExists = await hasCurrentUserTicketIndex(ticketEventId, uid)
+    if (currentUserTicketIndexExists) {
       throw new IllegalStateError("すでに整理券を取得しています")
     }
 
@@ -135,6 +142,14 @@ export const issueTicket = async (ticketEventId: string, uid: string): Promise<D
     transaction.set(ticketDocRef, {
       user: uid,
       status: "WAITING",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+
+    // insert index
+    const ticketIndexDocRef = doc(db, ticketEventsPath, ticketEventId, indexPath, ticketsPath, "user", uid)
+    transaction.set(ticketIndexDocRef, {
+      number: String(ticketNum),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })

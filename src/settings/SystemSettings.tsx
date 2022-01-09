@@ -1,5 +1,6 @@
 export const ticketEventsPath = "ticket-events"
 export const ticketsPath = "tickets"
+export const indexPath = "index"
 export const mypagePath = "mypage"
 export const createPath = "create"
 export const editPath = "edit"
