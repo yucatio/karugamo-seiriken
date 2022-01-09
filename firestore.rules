@@ -1,6 +1,11 @@
 rules_version = "2";
 service cloud.firestore {
   match /databases/{database}/documents {
+    function hasFields(required, optional) {
+      let allAllowedFields = required.concat(optional);
+      return request.resource.data.keys().hasAll(required) &&
+        request.resource.data.keys().hasOnly(allAllowedFields);
+    }
 
     match /ticket-events/{ticketEvent} {
       function validTicketEvent(docData) {
@@ -70,18 +75,44 @@ service cloud.firestore {
           return getAfter(/databases/$(database)/documents/ticket-events/$(ticketEvent)).data
         }
 
+        function ticketIndexDataAfter(user) {
+          return getAfter(
+            /databases/$(database)/documents/ticket-events/$(ticketEvent)/index/tickets/user/$(user)
+          ).data
+        }
+
         allow read: if request.auth != null && request.auth.uid == ticketEventData().owner;
 
         allow create: if request.auth != null && request.auth.uid == request.resource.data.user &&
           validTicket(request.resource.data) &&
           request.resource.data.status == "WAITING" &&
           request.resource.data.createdAt == request.time &&
-          request.resource.id == string(ticketEventDataAfter().nextTicketNum - 1);
+          request.resource.id == string(ticketEventDataAfter().nextTicketNum - 1) &&
+          ticketIndexDataAfter(request.resource.data.user).number == ticket;
 
         allow update: if request.auth != null && request.auth.uid == ticketEventData().owner &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["calledAt", "status", "updatedAt"]);
       }
+
+      match /index/tickets/user/{user} {
+        function validateIndexTicket(docData) {
+          return docData.number is string &&
+            docData.createdAt is timestamp &&
+            docData.updatedAt == request.time;
+        }
+
+        allow read: if request.auth != null && request.auth.uid == user;
+
+        allow create: if
+          hasFields(['number', 'createdAt', 'updatedAt'], []) &&
+          request.resource.data.createdAt == request.time &&
+          validateIndexTicket(request.resource.data) &&
+          getAfter(
+            /databases/$(database)/documents/ticket-events/$(ticketEvent)/tickets/$(request.resource.data.number)
+          ).data.user == user;
+      }
     }
+    
     match /{path=**}/tickets/{ticket} {
       allow read: if request.auth != null && request.auth.uid == resource.data.user;
     }
