@@ -8,7 +8,7 @@ export const numberCalled = (num: number): string => {
   return `${num}番を呼び出しました。`
 }
 
-export const ticketIssueFailed = "整理券の取得に失敗しました。"
+export const ticketIssueFailed = "整理券の取得に失敗しました。画面を更新します。最新の情報をご確認ください。"
 
 export const eventTicketNotFound = "整理券が存在しません。古い整理券は削除された可能性があります。"
 export const myEventTicketNotFound = "取得済みの整理券はありません。古い整理券は削除された可能性があります。"
