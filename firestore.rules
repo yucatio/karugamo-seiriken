@@ -9,7 +9,11 @@ service cloud.firestore {
 
     match /ticket-events/{ticketEvent} {
       function validTicketEvent(docData) {
-        return docData.callStatus is string &&
+        return 
+          hasFields(["callStatus", "detail", "nextCallNum", "nextTicketNum", "numTickets", "owner", "title", "createdAt", "updatedAt"], []) &&
+          // single field validation
+          // write in alphabetic order
+          docData.callStatus is string &&
           docData.callStatus.matches("^(NOT_STARTED|CALLING|FINISHED)$") &&
           docData.detail is string &&
           docData.detail.size() <= 5000 &&
@@ -22,8 +26,10 @@ service cloud.firestore {
           docData.owner.size() <= 256 &&
           docData.title is string &&
           docData.title.size() <= 50 &&
+          // timestamps
           docData.createdAt is timestamp &&
           docData.updatedAt == request.time &&
+          // inter-field validation
           docData.nextTicketNum - 1 <= docData.numTickets &&
           docData.nextCallNum <= docData.nextTicketNum;
       }
@@ -58,11 +64,16 @@ service cloud.firestore {
 
       match /tickets/{ticket} {
         function validTicket(docData) {
-          return docData.get("calledAt", request.time) is timestamp &&
+          return 
+            hasFields(["status", "user", "createdAt", "updatedAt"], ["calledAt"]) &&  
+            // single field validation
+            // write in alphabetic order
+            docData.get("calledAt", request.time) is timestamp &&
             docData.status is string &&
             docData.status.matches("^(WAITING|CALLED|STATUS_GREEN|STATUS_YELLOW|STATUS_RED)$")  &&
             docData.user is string &&
             docData.user.size() <= 256 &&
+            // timestamps
             docData.createdAt is timestamp &&
             docData.updatedAt == request.time;
         }
@@ -91,12 +102,16 @@ service cloud.firestore {
           ticketIndexDataAfter(request.resource.data.user).number == ticket;
 
         allow update: if request.auth != null && request.auth.uid == ticketEventData().owner &&
+          validTicket(request.resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["calledAt", "status", "updatedAt"]);
       }
 
       match /index/tickets/user/{user} {
         function validateIndexTicket(docData) {
-          return docData.number is string &&
+          return
+            // single field validation
+            docData.number is string &&
+            // timestamps
             docData.createdAt is timestamp &&
             docData.updatedAt == request.time;
         }
@@ -104,7 +119,7 @@ service cloud.firestore {
         allow read: if request.auth != null && request.auth.uid == user;
 
         allow create: if
-          hasFields(['number', 'createdAt', 'updatedAt'], []) &&
+          hasFields(["number", "createdAt", "updatedAt"], []) &&
           request.resource.data.createdAt == request.time &&
           validateIndexTicket(request.resource.data) &&
           getAfter(
