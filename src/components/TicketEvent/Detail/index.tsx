@@ -157,7 +157,7 @@ const TicketEventDetail = () => {
         <PageUrlAndQRCode ticketEvent={ticketEvent} />
       </Box>
       <Backdrop
-        sx={{ color: "white", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        sx={{ color: "white", zIndex: (theme) => theme.zIndex.modal + 1 }}
         open={backDropOpen}
       >
         <CircularProgress color="inherit" />
