@@ -194,7 +194,7 @@ const TicketEventAdmin = () => {
         </Box>
       </Box>
       <Backdrop
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.modal + 1 }}
         open={sending}
       >
         <CircularProgress color="inherit" />
