@@ -7,6 +7,7 @@ admin.initializeApp();
 const ticketExpiryDays = 30;
 
 // 古い整理券を削除する
+// 定期的なタスクにするべきだが、一旦RESTで実装する
 export const deleteOldTicketEvents =
   functions.https.onRequest(async (request, response) => {
     const db = admin.firestore();
