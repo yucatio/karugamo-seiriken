@@ -34,70 +34,44 @@ const RichEditor = (props: Props) => {
     )
   }
 
-  const toggleColor = (e: React.MouseEvent<HTMLSpanElement> | undefined, toggledStyle: string, groupStyles: string[]) => {
+  const toggleGroupItem = (e: React.MouseEvent<HTMLSpanElement> | undefined, toggledStyle: string, groupStyles: string[]) => {
     if (e) {
       e.preventDefault()
     }
-    const selection = editorState.getSelection();
 
-    // Let's just allow one color/fontSize at a time. Turn off all active colors/fontSize.
-    const nextContentState = groupStyles
-      .reduce((contentState, name) => {
-        return Modifier.removeInlineStyle(contentState, selection, name)
-      }, editorState.getCurrentContent())
+    const otherStyles = groupStyles.filter(style => style !== toggledStyle)
 
-    let nextEditorState: EditorState = EditorState.push(
-      editorState,
+    const selection = editorState.getSelection()
+
+    // toggle selected item
+    let nextEditorState = RichUtils.toggleInlineStyle(editorState, toggledStyle)
+
+    if (selection.isCollapsed()) {
+      // remove other items style
+      const nextStyle = otherStyles.reduce((styles, style) =>
+        styles.has(style) ? styles.remove(style) : styles
+        , nextEditorState.getCurrentInlineStyle())
+
+      onChange(EditorState.setInlineStyleOverride(
+        nextEditorState, nextStyle
+      ))
+
+      return
+    }
+
+    // if selection is there
+
+    // Let's just allow one color/fontSize at a time. Turn off other active colors/fontSize.
+    const nextContentState = otherStyles
+      .reduce((contentState, style) =>
+        Modifier.removeInlineStyle(contentState, selection, style)
+      , nextEditorState.getCurrentContent())
+
+    onChange(EditorState.push(
+      nextEditorState,
       nextContentState,
       "change-inline-style"
-    )
-
-    const currentStyle = editorState.getCurrentInlineStyle()
-    const nextStyle = nextEditorState.getCurrentInlineStyle()
-
-    // Unset style override for current color/fontSize.
-    if (selection.isCollapsed()) {
-      nextEditorState = currentStyle.reduce((state, style) => {
-        if (!state) {
-          // unreachable
-          return nextEditorState
-        }
-        if (!style) {
-          return state
-        }
-        if (groupStyles.includes(style)) {
-          return RichUtils.toggleInlineStyle(state, style)
-        }
-        if (!nextStyle.has(style)) {
-          return RichUtils.toggleInlineStyle(state, style)
-        }
-        return state
-      }, nextEditorState)
-
-      nextEditorState = nextStyle.reduce((state, style) => {
-        if (!state) {
-          // unreachable
-          return nextEditorState
-        }
-        if (!style) {
-          return state
-        }
-        if (!currentStyle.has(style)) {
-          return RichUtils.toggleInlineStyle(state, style)
-        }
-        return state
-      }, nextEditorState)
-    }
-
-    // If the color/fontSize is being toggled on, apply it.
-    if (!currentStyle.has(toggledStyle)) {
-      nextEditorState = RichUtils.toggleInlineStyle(
-        nextEditorState,
-        toggledStyle
-      );
-    }
-
-    onChange(nextEditorState)
+    ))
   }
 
   const detailLength = editorState.getCurrentContent().getPlainText('').length
@@ -105,7 +79,7 @@ const RichEditor = (props: Props) => {
   return (
     <>
       <Paper variant="outlined">
-        <FormatMenu editorState={editorState} onClickInlineStyle={handleClickInlineStyle} onChangeGroupStyle={toggleColor} />
+        <FormatMenu editorState={editorState} onClickInlineStyle={handleClickInlineStyle} onChangeGroupStyle={toggleGroupItem} />
         <Box onClick={focusEditor} sx={{ p: 2 }}>
           <Editor
             editorState={editorState}
