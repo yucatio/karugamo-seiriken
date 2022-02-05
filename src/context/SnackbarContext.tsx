@@ -19,7 +19,7 @@ export const SnackbarProvider: FC = ({ children }) => {
   const [message, setMessage] = useState<string>("")
 
   const handleClose = (
-    event: React.SyntheticEvent | React.MouseEvent,
+    event: Event | React.SyntheticEvent<any, Event>,
     reason?: string,
   ) => {
     if (reason === "clickaway") {
